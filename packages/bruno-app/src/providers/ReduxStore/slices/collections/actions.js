@@ -885,11 +885,21 @@ export const renameItem
         };
 
         let renameOperation = null;
-        if (newName) renameOperation = renameName;
-        if (newFilename) renameOperation = renameFile;
+        if (newName && newFilename) {
+          // 两者都改：先更新文件内 meta.name，再重命名磁盘文件（Finder 同步显示新名字）
+          renameOperation = async () => {
+            await renameName();
+            await renameFile();
+          };
+        } else if (newName) {
+          renameOperation = renameName;
+        } else if (newFilename) {
+          renameOperation = renameFile;
+        }
 
         if (!renameOperation) {
           resolve();
+          return;
         }
 
         renameOperation()
