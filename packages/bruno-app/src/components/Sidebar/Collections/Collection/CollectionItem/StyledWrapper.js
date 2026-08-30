@@ -143,6 +143,17 @@ const Wrapper = styled.div`
       outline: none;
     }
 
+    /* Multi-selection highlight (IDEA-style) */
+    &.item-selected {
+      background: ${(props) => props.theme.sidebar.collection.item.bg};
+
+      &:hover {
+        background: ${(props) => props.theme.sidebar.collection.item.bg} !important;
+      }
+
+      box-shadow: inset 2px 0 0 ${(props) => props.theme.sidebar.collection.item.focusBorder};
+    }
+
     div.tippy-box {
       position: relative;
       top: -0.625rem;

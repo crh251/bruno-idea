@@ -14,6 +14,7 @@ import {
   SIDEBAR_WIDTH_KEY,
   SIDEBAR_COLLAPSED_KEY
 } from 'utils/common/localStorage';
+import { sortItemsBySidebarOrder } from 'utils/collections';
 
 const initialState = {
   isDragging: false,
@@ -107,7 +108,13 @@ const initialState = {
   gitOperationProgress: {},
   gitVersion: null,
   clipboard: {
-    hasCopiedItems: false // Whether clipboard has Bruno data (for UI)
+    hasCopiedItems: false, // Whether clipboard has Bruno data (for UI)
+    hasCutItems: false
+  },
+  sidebarSelection: {
+    collectionUid: null,
+    uids: [],
+    anchorUid: null
   },
   systemProxyVariables: {},
   systemProxyLastRefreshedAt: null,
@@ -269,6 +276,18 @@ export const appSlice = createSlice({
     setClipboard: (state, action) => {
       // Update clipboard UI state
       state.clipboard.hasCopiedItems = action.payload.hasCopiedItems;
+      state.clipboard.hasCutItems = action.payload.hasCutItems ?? state.clipboard.hasCutItems;
+    },
+    setSidebarSelection: (state, action) => {
+      const { collectionUid, uids, anchorUid } = action.payload;
+      state.sidebarSelection.collectionUid = collectionUid;
+      state.sidebarSelection.uids = uids;
+      state.sidebarSelection.anchorUid = anchorUid;
+    },
+    clearSidebarSelection: (state) => {
+      state.sidebarSelection.collectionUid = null;
+      state.sidebarSelection.uids = [];
+      state.sidebarSelection.anchorUid = null;
     },
     setEnvVarSearchQuery: (state, { payload: { context, tab = 'variables', query } }) => {
       if (!state.envVarSearch[context]?.[tab]) return;
@@ -456,9 +475,65 @@ export const completeQuitFlow = () => (dispatch, getState) => {
 };
 
 export const copyRequest = (item) => (dispatch, getState) => {
-  brunoClipboard.write(item);
+  brunoClipboard.write({ items: [item] });
   dispatch(setClipboard({ hasCopiedItems: true }));
   return Promise.resolve();
+};
+
+export const copyItems = (items, sourceCollectionPathname) => (dispatch) => {
+  brunoClipboard.write({ items, isCut: false, sourceCollectionPathname });
+  dispatch(setClipboard({ hasCopiedItems: true, hasCutItems: false }));
+  return Promise.resolve();
+};
+
+export const cutItems = (items, sourceCollectionPathname) => (dispatch) => {
+  brunoClipboard.write({ items, isCut: true, sourceCollectionPathname });
+  dispatch(setClipboard({ hasCopiedItems: true, hasCutItems: true }));
+  return Promise.resolve();
+};
+
+// IDEA-style shift+click range selection: selects the items between the anchor
+// and the target within the same parent level (mirroring the sidebar sort order).
+export const selectSidebarRange = ({ collectionUid, anchorUid, targetUid }) => (dispatch, getState) => {
+  const state = getState();
+  const collection = state.collections.collections.find((c) => c.uid === collectionUid);
+  if (!collection) {
+    return;
+  }
+
+  // Find the parent items array that contains both the anchor and the target
+  let parentItems = null;
+  const visit = (items) => {
+    if (parentItems) return;
+    const uids = items.map((item) => item.uid);
+    if (uids.includes(anchorUid) && uids.includes(targetUid)) {
+      parentItems = items;
+      return;
+    }
+    for (const item of items) {
+      if (item.items?.length) visit(item.items);
+      if (parentItems) return;
+    }
+  };
+  visit(collection.items);
+
+  if (!parentItems) {
+    // Anchor and target live in different parents — select only the target
+    dispatch(setSidebarSelection({ collectionUid, uids: [targetUid], anchorUid: targetUid }));
+    return;
+  }
+
+  const sorted = sortItemsBySidebarOrder(parentItems);
+  const ids = sorted.map((item) => item.uid);
+  const anchorIndex = ids.indexOf(anchorUid);
+  const targetIndex = ids.indexOf(targetUid);
+  if (anchorIndex === -1 || targetIndex === -1) {
+    dispatch(setSidebarSelection({ collectionUid, uids: [targetUid], anchorUid: targetUid }));
+    return;
+  }
+  const [start, end] = anchorIndex <= targetIndex ? [anchorIndex, targetIndex] : [targetIndex, anchorIndex];
+  const rangeUids = ids.slice(start, end + 1);
+  dispatch(setSidebarSelection({ collectionUid, uids: rangeUids, anchorUid }));
 };
 
 export const getSystemProxyVariables = () => (dispatch, getState) => {

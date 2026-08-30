@@ -20,7 +20,8 @@ import {
   IconInfoCircle,
   IconTerminal2,
   IconAppWindow,
-  IconEyeOff
+  IconEyeOff,
+  IconX
 } from '@tabler/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { addTab, focusTab, makeTabPermanent } from 'providers/ReduxStore/slices/tabs';
@@ -29,18 +30,19 @@ import { sanitizeName } from 'utils/common/regex';
 import { formatIpcError } from 'utils/common/error';
 import { toggleCollectionItem, addResponseExample } from 'providers/ReduxStore/slices/collections';
 import { uuid } from 'utils/common';
-import { copyRequest, setFocusedSidebarPath, insertTaskIntoQueue } from 'providers/ReduxStore/slices/app';
+import { copyRequest, copyItems, cutItems, setFocusedSidebarPath, insertTaskIntoQueue, setSidebarSelection, selectSidebarRange, clearSidebarSelection } from 'providers/ReduxStore/slices/app';
 import NewRequest from 'components/Sidebar/NewRequest';
 import NewFolder from 'components/Sidebar/NewFolder';
 import NewApp from 'components/Sidebar/NewApp';
 import RenameCollectionItem from './RenameCollectionItem';
 import DeleteCollectionItem from './DeleteCollectionItem';
+import BatchDeleteCollectionItem from './BatchDeleteCollectionItem';
 import IgnoreCollectionItem from './IgnoreCollectionItem';
 import RunCollectionItem from './RunCollectionItem';
 import GenerateCodeItem from './GenerateCodeItem';
 import { isItemARequest, isItemAFolder, scrollToTheActiveTab } from 'utils/tabs';
 import { doesRequestMatchSearchText, doesFolderHaveItemsMatchSearchText } from 'utils/collections/search';
-import { getDefaultRequestPaneTab, getItemTypeLabel } from 'utils/collections';
+import { getDefaultRequestPaneTab, getItemTypeLabel, findItemInCollection } from 'utils/collections';
 import toast from 'react-hot-toast';
 import StyledWrapper from './StyledWrapper';
 import NetworkError from 'components/ResponsePane/NetworkError/index';
@@ -74,6 +76,10 @@ import useCopyToClipboard from 'hooks/useCopyToClipboard';
 const CollectionItem = ({ item, collectionUid, collectionPathname, searchText }) => {
   const { dropdownContainerRef } = useSidebarAccordion();
   const { copyToClipboard } = useCopyToClipboard();
+  const sidebarSelection = useSelector((state) => state.app.sidebarSelection);
+  const isSelected = sidebarSelection.collectionUid === collectionUid
+    && sidebarSelection.uids.includes(item.uid);
+  const isMultiSelection = isSelected && sidebarSelection.uids.length > 1;
   const selectorInput = {
     itemUid: item.uid,
     itemPathname: item.pathname,
@@ -100,6 +106,7 @@ const CollectionItem = ({ item, collectionUid, collectionPathname, searchText })
 
   const [renameItemModalOpen, setRenameItemModalOpen] = useState(false);
   const [deleteItemModalOpen, setDeleteItemModalOpen] = useState(false);
+  const [batchDeleteModalOpen, setBatchDeleteModalOpen] = useState(false);
   const [ignoreItemModalOpen, setIgnoreItemModalOpen] = useState(false);
   const [createExampleModalOpen, setCreateExampleModalOpen] = useState(false);
   const [generateCodeItemModalOpen, setGenerateCodeItemModalOpen] = useState(false);
@@ -259,6 +266,7 @@ const CollectionItem = ({ item, collectionUid, collectionPathname, searchText })
 
   const itemRowClassName = classnames('flex collection-item-name relative items-center', {
     'item-focused-in-tab': isTabForItemActive,
+    'item-selected': isSelected,
     'item-hovered': isOver && canDrop,
     'drop-target': isOver && canDrop && dropType === 'inside',
     'drop-target-above': isOver && canDrop && dropType === 'above',
@@ -276,6 +284,32 @@ const CollectionItem = ({ item, collectionUid, collectionPathname, searchText })
 
   const handleClick = (event) => {
     if (event && event.detail != 1) return;
+
+    // Cmd/Ctrl+click: toggle selection (IDEA-style multi-select)
+    if (event.metaKey || event.ctrlKey) {
+      event.preventDefault();
+      const baseUids = sidebarSelection.collectionUid === collectionUid ? sidebarSelection.uids : [];
+      const currentUids = isSelected
+        ? baseUids.filter((uid) => uid !== item.uid)
+        : [...baseUids, item.uid];
+      dispatch(setSidebarSelection({ collectionUid, uids: currentUids, anchorUid: item.uid }));
+      return;
+    }
+
+    // Shift+click: range selection within the same parent level
+    if (event.shiftKey) {
+      event.preventDefault();
+      const anchorUid = sidebarSelection.collectionUid === collectionUid
+        ? (sidebarSelection.anchorUid || sidebarSelection.uids[sidebarSelection.uids.length - 1] || item.uid)
+        : item.uid;
+      dispatch(selectSidebarRange({ collectionUid, anchorUid, targetUid: item.uid }));
+      return;
+    }
+
+    if (isSelected) {
+      dispatch(clearSidebarSelection());
+    }
+
     // scroll to the active tab
     setTimeout(scrollToTheActiveTab, 50);
     const isRequest = isItemARequest(item);
@@ -354,11 +388,56 @@ const CollectionItem = ({ item, collectionUid, collectionPathname, searchText })
     menuDropdownRef.current?.show();
   };
 
+  // Escape clears the multi-selection on this row
+  const handleKeyDown = (event) => {
+    if (event.key === 'Escape' && isSelected) {
+      dispatch(clearSidebarSelection());
+    }
+  };
+
   const indents = range(item.depth);
 
   // Build menu items for MenuDropdown
   const buildMenuItems = () => {
     const items = [];
+
+    // Multi-selection: batch operations replace the single-item menu
+    if (isMultiSelection) {
+      const count = sidebarSelection.uids.length;
+      const selectedItems = sidebarSelection.uids
+        .map((uid) => findItemInCollection(collection, uid))
+        .filter(Boolean);
+
+      items.push(
+        {
+          id: 'batch-copy',
+          leftSection: IconCopy,
+          label: `Copy ${count} items`,
+          onClick: () => {
+            dispatch(copyItems(selectedItems, collection.pathname));
+            toast.success(`${count} items copied`);
+          }
+        },
+        {
+          id: 'batch-cut',
+          leftSection: IconClipboard,
+          label: `Cut ${count} items`,
+          onClick: () => {
+            dispatch(cutItems(selectedItems, collection.pathname));
+            toast.success(`${count} items cut`);
+          }
+        },
+        { id: 'batch-separator', type: 'divider' },
+        {
+          id: 'batch-delete',
+          leftSection: IconTrash,
+          label: `Delete ${count} items`,
+          className: 'delete-item',
+          onClick: () => setBatchDeleteModalOpen(true)
+        }
+      );
+      return items;
+    }
 
     if (isFolder) {
       items.push(
@@ -711,6 +790,13 @@ const CollectionItem = ({ item, collectionUid, collectionPathname, searchText })
       {deleteItemModalOpen && (
         <DeleteCollectionItem item={item} collectionUid={collectionUid} onClose={() => setDeleteItemModalOpen(false)} />
       )}
+      {batchDeleteModalOpen && (
+        <BatchDeleteCollectionItem
+          items={getSelectedItems()}
+          collectionUid={collectionUid}
+          onClose={() => setBatchDeleteModalOpen(false)}
+        />
+      )}
       {ignoreItemModalOpen && (
         <IgnoreCollectionItem item={item} collectionUid={collectionUid} onClose={() => setIgnoreItemModalOpen(false)} />
       )}
@@ -745,8 +831,13 @@ const CollectionItem = ({ item, collectionUid, collectionPathname, searchText })
           ref.current = node;
           drag(drop(node));
         }}
-        tabIndex={0}
-        onFocus={handleFocus}
+      ref={(node) => {
+        ref.current = node;
+        drag(drop(node));
+      }}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      onFocus={handleFocus}
         onBlur={handleBlur}
         onContextMenu={handleContextMenu}
         data-testid="sidebar-collection-item-row"

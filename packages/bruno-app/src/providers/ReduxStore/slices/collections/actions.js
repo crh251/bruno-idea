@@ -994,6 +994,11 @@ export const pasteItem = (targetCollectionUid, targetItemUid = null) => (dispatc
     return Promise.reject(new Error('No item in clipboard'));
   }
 
+  const clipboardItems = clipboardResult.items;
+  const isCut = !!clipboardResult.isCut;
+  const sourceCollectionPathname = clipboardResult.sourceCollectionPathname || null;
+  const cutSourceItems = [];
+
   const targetCollection = findCollectionByUid(state.collections.collections, targetCollectionUid);
 
   if (!targetCollection) {
@@ -1002,7 +1007,7 @@ export const pasteItem = (targetCollectionUid, targetItemUid = null) => (dispatc
 
   return new Promise(async (resolve, reject) => {
     try {
-      for (const clipboardItem of clipboardResult.items) {
+      for (const clipboardItem of clipboardItems) {
         const copiedItem = cloneDeep(clipboardItem);
 
         const targetCollectionCopy = cloneDeep(targetCollection);
@@ -1022,12 +1027,12 @@ export const pasteItem = (targetCollectionUid, targetItemUid = null) => (dispatc
         }
 
         const existingItems = targetItem ? targetItem.items : targetCollection.items;
+        // Cut semantics keep the original name (move-like); copy appends " copy"
+        const displayName = isCut ? copiedItem.name : copyDisplayName(copiedItem.name);
 
         // Handle folder pasting
         if (isItemAFolder(copiedItem)) {
-          // Display name becomes "<source> copy"; electron resolves the
-          // filesystem name uniqueness silently.
-          const newName = copyDisplayName(copiedItem.name);
+          const newName = displayName;
           const newFilename = sanitizeName(newName);
 
           set(copiedItem, 'name', newName);
@@ -1040,9 +1045,8 @@ export const pasteItem = (targetCollectionUid, targetItemUid = null) => (dispatc
 
           await ipcRenderer.invoke('renderer:clone-folder', copiedItem, fullPathname, targetCollection.pathname);
         } else {
-          // Handle request pasting — display name "<source> copy"
-          // electron resolves the filename uniqueness and returns the path actually used.
-          const newName = copyDisplayName(copiedItem.name);
+          // Handle request pasting
+          const newName = displayName;
           const newFilename = sanitizeName(newName);
 
           const filename = resolveRequestFilename(newFilename, targetCollection.format);
@@ -1064,6 +1068,22 @@ export const pasteItem = (targetCollectionUid, targetItemUid = null) => (dispatc
             collectionUid: targetCollectionUid,
             itemPathname: result?.pathname || fullPathname
           }));
+        }
+
+        if (isCut) {
+          cutSourceItems.push({ pathname: clipboardItem.pathname, type: copiedItem.type });
+        }
+      }
+
+      if (isCut && cutSourceItems.length) {
+        // Cut semantics: remove the source items after a successful paste.
+        // Individual failures are logged and don't abort the remaining deletions.
+        for (const { pathname: srcPathname, type } of cutSourceItems) {
+          try {
+            await ipcRenderer.invoke('renderer:delete-item', srcPathname, type, sourceCollectionPathname || targetCollection.pathname);
+          } catch (error) {
+            console.error('[ccs] cut: failed to delete source item', srcPathname, error);
+          }
         }
       }
 
