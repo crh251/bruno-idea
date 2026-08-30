@@ -24,7 +24,7 @@ import {
 } from '@tabler/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { addTab, focusTab, makeTabPermanent } from 'providers/ReduxStore/slices/tabs';
-import { handleCollectionItemDrop, sendRequest, showInFolder, pasteItem, saveRequest, cloneItem } from 'providers/ReduxStore/slices/collections/actions';
+import { handleCollectionItemDrop, sendRequest, showInFolder, pasteItem, saveRequest, cloneItem, openInIterm } from 'providers/ReduxStore/slices/collections/actions';
 import { sanitizeName } from 'utils/common/regex';
 import { formatIpcError } from 'utils/common/error';
 import { toggleCollectionItem, addResponseExample } from 'providers/ReduxStore/slices/collections';
@@ -453,10 +453,31 @@ const CollectionItem = ({ item, collectionUid, collectionPathname, searchText })
 
     items.push(
       {
-        id: 'show-in-folder',
+        id: 'open-in',
         leftSection: IconFolder,
-        label: getRevealInFolderLabel(),
-        onClick: handleShowInFolder
+        label: 'Open In',
+        submenu: [
+          {
+            id: 'open-in-finder',
+            leftSection: IconFolder,
+            label: getRevealInFolderLabel(),
+            onClick: handleShowInFolder
+          },
+          {
+            id: 'open-in-terminal',
+            leftSection: IconTerminal2,
+            label: 'Terminal',
+            onClick: async () => {
+              await openDevtoolsAndSwitchToTerminal(dispatch, openCwd);
+            }
+          },
+          {
+            id: 'open-in-iterm',
+            leftSection: IconTerminal2,
+            label: 'iTerm',
+            onClick: handleOpenInIterm
+          }
+        ]
       }
     );
 
@@ -494,15 +515,6 @@ const CollectionItem = ({ item, collectionUid, collectionPathname, searchText })
           leftSection: IconSettings,
           label: 'Settings',
           onClick: viewFolderSettings
-        },
-        {
-          id: 'open-terminal',
-          leftSection: IconTerminal2,
-          label: 'Open in Terminal',
-          onClick: async () => {
-            const folderCwd = item.pathname || collectionPathname;
-            await openDevtoolsAndSwitchToTerminal(dispatch, folderCwd);
-          }
         }
       );
     }
@@ -553,6 +565,19 @@ const CollectionItem = ({ item, collectionUid, collectionPathname, searchText })
   const handleCopyPath = () => {
     copyToClipboard(item.pathname);
     toast.success('Full path copied to clipboard');
+  };
+
+  // 终端打开目录：文件夹用自身路径，文件用其所在目录
+  const openCwd = isFolder ? item.pathname : item.pathname.substring(0, item.pathname.lastIndexOf('/'));
+
+  const handleOpenInIterm = () => {
+    dispatch(openInIterm(openCwd))
+      .then(() => {
+        toast.success('Opened in iTerm');
+      })
+      .catch((error) => {
+        toast.error(formatIpcError(error) || 'Failed to open in iTerm');
+      });
   };
 
   const handleCreateExample = async (name, description = '') => {

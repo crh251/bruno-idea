@@ -27,7 +27,7 @@ import {
 } from '@tabler/icons';
 import OpenAPISyncIcon from 'components/Icons/OpenAPISync';
 import { toggleCollection, collapseFullCollection } from 'providers/ReduxStore/slices/collections';
-import { mountCollection, moveCollectionAndPersist, handleCollectionItemDrop, pasteItem, showInFolder, saveCollectionSecurityConfig } from 'providers/ReduxStore/slices/collections/actions';
+import { mountCollection, moveCollectionAndPersist, handleCollectionItemDrop, pasteItem, showInFolder, openInIterm, saveCollectionSecurityConfig } from 'providers/ReduxStore/slices/collections/actions';
 import { useDispatch, useSelector } from 'react-redux';
 import { addTab, makeTabPermanent } from 'providers/ReduxStore/slices/tabs';
 import { setFocusedSidebarPath } from 'providers/ReduxStore/slices/app';
@@ -223,6 +223,16 @@ const Collection = ({ collection, searchText }) => {
   const handleCopyPath = () => {
     copyToClipboard(collection.pathname);
     toast.success('Full path copied to clipboard');
+  };
+
+  const handleOpenInIterm = () => {
+    dispatch(openInIterm(collection.pathname))
+      .then(() => {
+        toast.success('Opened in iTerm');
+      })
+      .catch(() => {
+        toast.error('Failed to open in iTerm');
+      });
   };
 
   const handlePasteItem = () => {
@@ -468,10 +478,32 @@ const Collection = ({ collection, searchText }) => {
       onClick: handleCollapseFullCollection
     },
     {
-      id: 'show-in-folder',
+      id: 'open-in',
       leftSection: IconFolder,
-      label: getRevealInFolderLabel(),
-      onClick: handleShowInFolder
+      label: 'Open In',
+      submenu: [
+        {
+          id: 'open-in-finder',
+          leftSection: IconFolder,
+          label: getRevealInFolderLabel(),
+          onClick: handleShowInFolder
+        },
+        {
+          id: 'open-in-terminal',
+          leftSection: IconTerminal2,
+          label: 'Terminal',
+          onClick: async () => {
+            const collectionCwd = collection.pathname;
+            await openDevtoolsAndSwitchToTerminal(dispatch, collectionCwd);
+          }
+        },
+        {
+          id: 'open-in-iterm',
+          leftSection: IconTerminal2,
+          label: 'iTerm',
+          onClick: handleOpenInIterm
+        }
+      ]
     },
     {
       id: 'copy-full-path',
@@ -495,15 +527,6 @@ const Collection = ({ collection, searchText }) => {
       leftSection: IconSettings,
       label: 'Settings',
       onClick: viewCollectionSettings
-    },
-    {
-      id: 'terminal',
-      leftSection: IconTerminal2,
-      label: 'Open in Terminal',
-      onClick: async () => {
-        const collectionCwd = collection.pathname;
-        await openDevtoolsAndSwitchToTerminal(dispatch, collectionCwd);
-      }
     },
     ...(isMoveToWorkspaceVisible
       ? [

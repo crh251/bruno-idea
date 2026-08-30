@@ -2454,6 +2454,40 @@ const registerRendererEventHandlers = (mainWindow, watcher) => {
     }
   });
 
+  ipcMain.handle('renderer:open-in-iterm', async (event, dirPath) => {
+    try {
+      if (!dirPath) {
+        throw new Error('Directory path is required');
+      }
+      const safePath = String(dirPath).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const script = `
+        tell application "iTerm"
+          activate
+          if (count of windows) = 0 then
+            create window with default profile
+            tell current session of current window to write text "cd \\"${safePath}\\""
+          else
+            tell current window
+              create tab with default profile
+              tell current session of current window to write text "cd \\"${safePath}\\""
+            end tell
+          end if
+        end tell`;
+      await new Promise((resolve, reject) => {
+        require('child_process').execFile('osascript', ['-e', script], (error) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Error in open-in-iterm: ', error);
+      throw error;
+    }
+  });
+
   // Implement the Postman to Bruno conversion handler
   ipcMain.handle('renderer:convert-postman-to-bruno', async (event, postmanCollection, options = {}) => {
     try {

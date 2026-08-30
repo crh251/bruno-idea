@@ -3201,6 +3201,13 @@ export const showInFolder = (collectionPath) => () => {
   });
 };
 
+export const openInIterm = (dirPath) => () => {
+  return new Promise((resolve, reject) => {
+    const { ipcRenderer } = window;
+    ipcRenderer.invoke('renderer:open-in-iterm', dirPath).then(resolve).catch(reject);
+  });
+};
+
 export const updateRunnerConfiguration
   = (collectionUid, selectedRequestItems, requestItemsOrder, delay) => (dispatch) => {
     dispatch(
