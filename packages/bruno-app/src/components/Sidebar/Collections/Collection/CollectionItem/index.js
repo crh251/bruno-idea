@@ -21,11 +21,12 @@ import {
   IconTerminal2,
   IconAppWindow,
   IconEyeOff,
-  IconX
+  IconX,
+  IconFoldDown
 } from '@tabler/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { addTab, focusTab, makeTabPermanent } from 'providers/ReduxStore/slices/tabs';
-import { handleCollectionItemDrop, sendRequest, showInFolder, pasteItem, saveRequest, cloneItem, openInIterm } from 'providers/ReduxStore/slices/collections/actions';
+import { handleCollectionItemDrop, sendRequest, showInFolder, pasteItem, saveRequest, cloneItem, openInIterm, expandAllInCollection, collapseAllInCollection } from 'providers/ReduxStore/slices/collections/actions';
 import { sanitizeName } from 'utils/common/regex';
 import { formatIpcError } from 'utils/common/error';
 import { toggleCollectionItem, addResponseExample } from 'providers/ReduxStore/slices/collections';
@@ -594,6 +595,22 @@ const CollectionItem = ({ item, collectionUid, collectionPathname, searchText })
           leftSection: IconSettings,
           label: 'Settings',
           onClick: viewFolderSettings
+        },
+        {
+          id: 'expand-all',
+          leftSection: IconFoldDown,
+          label: 'Expand All',
+          onClick: () => {
+            dispatch(expandAllInCollection({ collectionUid, itemUid: item.uid }));
+          }
+        },
+        {
+          id: 'collapse-all',
+          leftSection: IconFoldDown,
+          label: 'Collapse All',
+          onClick: () => {
+            dispatch(collapseAllInCollection({ collectionUid, itemUid: item.uid }));
+          }
         }
       );
     }

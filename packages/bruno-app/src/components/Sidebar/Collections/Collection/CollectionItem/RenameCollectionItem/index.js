@@ -64,13 +64,21 @@ const RenameCollectionItem = ({ collectionUid, item, onClose }) => {
       }
       const { name: newName, filename: newFilename } = values;
       try {
+        const nameChanged = item.name !== newName;
+        const filenameChanged = itemFilename !== newFilename;
         let renameConfig = {
           itemUid: item.uid,
           collectionUid
         };
-        renameConfig['newName'] = newName;
-        if (itemFilename !== newFilename) {
+        if (nameChanged) {
+          renameConfig['newName'] = newName;
+        }
+        if (filenameChanged) {
+          // 用户显式修改了文件名
           renameConfig['newFilename'] = newFilename;
+        } else if (nameChanged) {
+          // 只改名字时：磁盘文件名跟随新名字，Finder 直接显示新名称
+          renameConfig['newFilename'] = sanitizeName(newFilename);
         }
         await dispatch(renameItem(renameConfig));
         if (isFolder) {

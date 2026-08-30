@@ -54,13 +54,13 @@ jobs:
           VERSION=$(node -p "require('./packages/bruno-electron/package.json').version")
           DMG=$(find packages/bruno-electron/out -name "*.dmg" -type f | head -1)
           mkdir -p release
-          cp "$DMG" "release/bruno_${VERSION}_arm64_mac_ccs.dmg"
+          cp "$DMG" "release/bruno-idea_${VERSION}_macos-arm64.dmg"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: bruno-macos-arm64-dmg
+          name: bruno-idea-macos-arm64-dmg
           path: release/*.dmg
           if-no-files-found: error
 
@@ -68,8 +68,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="v${VERSION}"
+          TAG="bruno-idea-v${VERSION}"
           gh release create "$TAG" release/*.dmg \
-            --title "Bruno $VERSION (macOS arm64)" \
-            --notes "自编译 Bruno macOS arm64 DMG（未签名）。首次打开前：xattr -d com.apple.quarantine <DMG路径>" \
+            --title "bruno-idea $VERSION (macOS arm64)" \
+            --notes "自编译 bruno-idea macOS arm64 DMG（未签名）。首次打开前：xattr -d com.apple.quarantine <DMG路径>" \
             --latest || gh release upload "$TAG" release/*.dmg --clobber

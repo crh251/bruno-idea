@@ -27,7 +27,7 @@ import {
 } from '@tabler/icons';
 import OpenAPISyncIcon from 'components/Icons/OpenAPISync';
 import { toggleCollection, collapseFullCollection } from 'providers/ReduxStore/slices/collections';
-import { mountCollection, moveCollectionAndPersist, handleCollectionItemDrop, pasteItem, showInFolder, openInIterm, saveCollectionSecurityConfig } from 'providers/ReduxStore/slices/collections/actions';
+import { mountCollection, moveCollectionAndPersist, handleCollectionItemDrop, pasteItem, showInFolder, openInIterm, expandAllInCollection, collapseAllInCollection, saveCollectionSecurityConfig } from 'providers/ReduxStore/slices/collections/actions';
 import { useDispatch, useSelector } from 'react-redux';
 import { addTab, makeTabPermanent } from 'providers/ReduxStore/slices/tabs';
 import { setFocusedSidebarPath } from 'providers/ReduxStore/slices/app';
@@ -472,9 +472,17 @@ const Collection = ({ collection, searchText }) => {
       }
     },
     {
-      id: 'collapse',
+      id: 'expand-all',
       leftSection: IconFoldDown,
-      label: 'Collapse',
+      label: 'Expand All',
+      onClick: () => {
+        dispatch(expandAllInCollection({ collectionUid }));
+      }
+    },
+    {
+      id: 'collapse-all',
+      leftSection: IconFoldDown,
+      label: 'Collapse All',
       onClick: handleCollapseFullCollection
     },
     {

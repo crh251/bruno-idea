@@ -281,6 +281,43 @@ export const collectionsSlice = createSlice({
         collapseAllItemsInCollection(collection);
       }
     },
+    expandAllInCollection: (state, action) => {
+      const { collectionUid, itemUid } = action.payload || {};
+      const collection = findCollectionByUid(state.collections, collectionUid);
+      if (!collection) return;
+      const expandItem = (item) => {
+        item.collapsed = false;
+        each(item.items, (child) => {
+          if (child.type === 'folder') expandItem(child);
+        });
+      };
+      if (itemUid) {
+        const item = findItemInCollection(collection, itemUid);
+        if (item && item.type === 'folder') expandItem(item);
+      } else {
+        collection.collapsed = false;
+        each(collection.items, (child) => {
+          if (child.type === 'folder') expandItem(child);
+        });
+      }
+    },
+    collapseAllInCollection: (state, action) => {
+      const { collectionUid, itemUid } = action.payload || {};
+      const collection = findCollectionByUid(state.collections, collectionUid);
+      if (!collection) return;
+      const collapseItem = (item) => {
+        item.collapsed = true;
+        each(item.items, (child) => {
+          if (child.type === 'folder') collapseItem(child);
+        });
+      };
+      if (itemUid) {
+        const item = findItemInCollection(collection, itemUid);
+        if (item && item.type === 'folder') collapseItem(item);
+      } else {
+        collapseAllItemsInCollection(collection);
+      }
+    },
     updateCollectionMountStatus: (state, action) => {
       const collection = findCollectionByUid(state.collections, action.payload.collectionUid);
       if (collection) {
@@ -4083,6 +4120,8 @@ export const {
   clearEnvironmentsDraft,
   newEphemeralHttpRequest,
   collapseFullCollection,
+  expandAllInCollection,
+  collapseAllInCollection,
   toggleCollection,
   expandCollection,
   toggleCollectionItem,
