@@ -32,6 +32,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addTab, makeTabPermanent } from 'providers/ReduxStore/slices/tabs';
 import { setFocusedSidebarPath } from 'providers/ReduxStore/slices/app';
 import toast from 'react-hot-toast';
+import useCopyToClipboard from 'hooks/useCopyToClipboard';
 import NewRequest from 'components/Sidebar/NewRequest';
 import NewFolder from 'components/Sidebar/NewFolder';
 import NewApp from 'components/Sidebar/NewApp';
@@ -210,11 +211,18 @@ const Collection = ({ collection, searchText }) => {
     );
   };
 
+  const { copyToClipboard } = useCopyToClipboard();
+
   const handleShowInFolder = () => {
     dispatch(showInFolder(collection.pathname)).catch((error) => {
       console.error('Error opening the folder', error);
       toast.error('Error opening the folder');
     });
+  };
+
+  const handleCopyPath = () => {
+    copyToClipboard(collection.pathname);
+    toast.success('Full path copied to clipboard');
   };
 
   const handlePasteItem = () => {
@@ -464,6 +472,12 @@ const Collection = ({ collection, searchText }) => {
       leftSection: IconFolder,
       label: getRevealInFolderLabel(),
       onClick: handleShowInFolder
+    },
+    {
+      id: 'copy-full-path',
+      leftSection: IconCopy,
+      label: 'Copy Full Path',
+      onClick: handleCopyPath
     },
     ...(isMockServerEnabled ? [{
       id: 'create-mock-server',

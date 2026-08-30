@@ -69,9 +69,11 @@ import ActionIcon from 'ui/ActionIcon';
 import MenuDropdown from 'ui/MenuDropdown';
 import { useSidebarAccordion } from 'components/Sidebar/SidebarAccordionContext';
 import useKeybinding from 'hooks/useKeybinding';
+import useCopyToClipboard from 'hooks/useCopyToClipboard';
 
 const CollectionItem = ({ item, collectionUid, collectionPathname, searchText }) => {
   const { dropdownContainerRef } = useSidebarAccordion();
+  const { copyToClipboard } = useCopyToClipboard();
   const selectorInput = {
     itemUid: item.uid,
     itemPathname: item.pathname,
@@ -458,6 +460,15 @@ const CollectionItem = ({ item, collectionUid, collectionPathname, searchText })
       }
     );
 
+    items.push(
+      {
+        id: 'copy-full-path',
+        leftSection: IconCopy,
+        label: 'Copy Full Path',
+        onClick: handleCopyPath
+      }
+    );
+
     if (isFolder) {
       items.push({
         id: 'ignore',
@@ -537,6 +548,11 @@ const CollectionItem = ({ item, collectionUid, collectionPathname, searchText })
       console.error('Error opening the folder', error);
       toast.error('Error opening the folder');
     });
+  };
+
+  const handleCopyPath = () => {
+    copyToClipboard(item.pathname);
+    toast.success('Full path copied to clipboard');
   };
 
   const handleCreateExample = async (name, description = '') => {
