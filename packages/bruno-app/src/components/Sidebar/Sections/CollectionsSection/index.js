@@ -13,14 +13,16 @@ import {
   IconSortDescendingLetters,
   IconSquareX,
   IconBox,
-  IconTerminal2
+  IconTerminal2,
+  IconChevronsDown,
+  IconChevronsUp
 } from '@tabler/icons';
 
-import { importCollection, importCollectionFromZip, newHttpRequest } from 'providers/ReduxStore/slices/collections/actions';
+import { importCollection, importCollectionFromZip, newHttpRequest, expandAllInCollection, collapseAllInCollection } from 'providers/ReduxStore/slices/collections/actions';
 import { sortCollections } from 'providers/ReduxStore/slices/collections/index';
 import { savePreferences, setIsCreatingCollection, setIsOpeningCollection, toggleSidebarSearch } from 'providers/ReduxStore/slices/app';
 import { normalizePath } from 'utils/common/path';
-import { isScratchCollection, flattenItems, isItemTransientRequest } from 'utils/collections';
+import { isScratchCollection, flattenItems, isItemTransientRequest, findItemInCollection } from 'utils/collections';
 import { sanitizeName } from 'utils/common/regex';
 import filter from 'lodash/filter';
 
@@ -291,6 +293,42 @@ const CollectionsSection = () => {
     }
   ];
 
+  const sidebarSelection = useSelector((state) => state.app.sidebarSelection);
+
+  // IDEA 式：若当前选中的是一个文件夹，展开/收起只作用于该文件夹的子树
+  const getSelectedFolderScope = () => {
+    if (sidebarSelection?.collectionUid && sidebarSelection.uids.length === 1) {
+      const collection = collections.find((c) => c.uid === sidebarSelection.collectionUid);
+      const item = collection ? findItemInCollection(collection, sidebarSelection.uids[0]) : null;
+      if (item && item.type === 'folder') {
+        return { collectionUid: collection.uid, itemUid: item.uid };
+      }
+    }
+    return null;
+  };
+
+  const handleExpandAll = () => {
+    const scope = getSelectedFolderScope();
+    if (scope) {
+      dispatch(expandAllInCollection(scope));
+      return;
+    }
+    collections.forEach((collection) => {
+      dispatch(expandAllInCollection({ collectionUid: collection.uid }));
+    });
+  };
+
+  const handleCollapseAll = () => {
+    const scope = getSelectedFolderScope();
+    if (scope) {
+      dispatch(collapseAllInCollection(scope));
+      return;
+    }
+    collections.forEach((collection) => {
+      dispatch(collapseAllInCollection({ collectionUid: collection.uid }));
+    });
+  };
+
   const sectionActions = (
     <>
       <ActionIcon
@@ -298,6 +336,20 @@ const CollectionsSection = () => {
         label="Search requests"
       >
         <IconSearch size={14} stroke={1.5} aria-hidden="true" />
+      </ActionIcon>
+
+      <ActionIcon
+        onClick={handleExpandAll}
+        label="Expand all folders"
+      >
+        <IconChevronsDown size={14} stroke={1.5} aria-hidden="true" />
+      </ActionIcon>
+
+      <ActionIcon
+        onClick={handleCollapseAll}
+        label="Collapse all folders"
+      >
+        <IconChevronsUp size={14} stroke={1.5} aria-hidden="true" />
       </ActionIcon>
 
       <MenuDropdown

@@ -26,10 +26,10 @@ import {
 } from '@tabler/icons';
 import { useSelector, useDispatch } from 'react-redux';
 import { addTab, focusTab, makeTabPermanent } from 'providers/ReduxStore/slices/tabs';
-import { handleCollectionItemDrop, sendRequest, showInFolder, pasteItem, saveRequest, cloneItem, openInIterm, expandAllInCollection, collapseAllInCollection } from 'providers/ReduxStore/slices/collections/actions';
+import { handleCollectionItemDrop, sendRequest, showInFolder, pasteItem, saveRequest, cloneItem, openInIterm } from 'providers/ReduxStore/slices/collections/actions';
 import { sanitizeName } from 'utils/common/regex';
 import { formatIpcError } from 'utils/common/error';
-import { toggleCollectionItem, addResponseExample } from 'providers/ReduxStore/slices/collections';
+import { toggleCollectionItem, addResponseExample, expandAllInCollection, collapseAllInCollection } from 'providers/ReduxStore/slices/collections';
 import { uuid } from 'utils/common';
 import { copyRequest, copyItems, cutItems, setFocusedSidebarPath, insertTaskIntoQueue, setSidebarSelection, selectSidebarRange, clearSidebarSelection } from 'providers/ReduxStore/slices/app';
 import NewRequest from 'components/Sidebar/NewRequest';

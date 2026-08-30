@@ -26,8 +26,8 @@ import {
   IconAppWindow
 } from '@tabler/icons';
 import OpenAPISyncIcon from 'components/Icons/OpenAPISync';
-import { toggleCollection, collapseFullCollection } from 'providers/ReduxStore/slices/collections';
-import { mountCollection, moveCollectionAndPersist, handleCollectionItemDrop, pasteItem, showInFolder, openInIterm, expandAllInCollection, collapseAllInCollection, saveCollectionSecurityConfig } from 'providers/ReduxStore/slices/collections/actions';
+import { toggleCollection, collapseFullCollection, expandAllInCollection, collapseAllInCollection } from 'providers/ReduxStore/slices/collections';
+import { mountCollection, moveCollectionAndPersist, handleCollectionItemDrop, pasteItem, showInFolder, openInIterm, saveCollectionSecurityConfig } from 'providers/ReduxStore/slices/collections/actions';
 import { useDispatch, useSelector } from 'react-redux';
 import { addTab, makeTabPermanent } from 'providers/ReduxStore/slices/tabs';
 import { setFocusedSidebarPath } from 'providers/ReduxStore/slices/app';

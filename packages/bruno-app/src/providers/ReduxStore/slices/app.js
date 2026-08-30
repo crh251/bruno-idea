@@ -348,6 +348,8 @@ export const {
   toggleSidebarCollapse,
   toggleSidebarSearch,
   setFocusedSidebarPath,
+  setSidebarSelection,
+  clearSidebarSelection,
   updateGitOperationProgress,
   removeGitOperationProgress,
   setGitVersion,
