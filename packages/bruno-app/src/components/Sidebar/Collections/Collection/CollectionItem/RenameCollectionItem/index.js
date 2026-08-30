@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { isItemAFolder } from 'utils/tabs';
 import { getItemTypeLabel } from 'utils/collections';
 import { renameItem, saveRequest, closeTabs } from 'providers/ReduxStore/slices/collections/actions';
+import { clearSidebarSelection } from 'providers/ReduxStore/slices/app';
 import path from 'utils/common/path';
 import { IconArrowBackUp, IconEdit, IconCaretDown } from '@tabler/icons';
 import { sanitizeName, validateName, validateNameError } from 'utils/common/regex';
@@ -81,6 +82,8 @@ const RenameCollectionItem = ({ collectionUid, item, onClose }) => {
           renameConfig['newFilename'] = sanitizeName(newFilename);
         }
         await dispatch(renameItem(renameConfig));
+        // 改名会变更 uid，清空可能过期的侧栏多选
+        dispatch(clearSidebarSelection());
         if (isFolder) {
           dispatch(closeTabs({ tabUids: [item.uid] }));
         }

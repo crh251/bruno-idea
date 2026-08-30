@@ -3,6 +3,7 @@ import Modal from 'components/Modal';
 import { isItemAFolder } from 'utils/tabs';
 import { useDispatch } from 'react-redux';
 import { deleteItem, closeTabs } from 'providers/ReduxStore/slices/collections/actions';
+import { clearSidebarSelection } from 'providers/ReduxStore/slices/app';
 import { recursivelyGetAllItemUids, getItemTypeLabel } from 'utils/collections';
 import StyledWrapper from './StyledWrapper';
 import toast from 'react-hot-toast';
@@ -30,6 +31,8 @@ const DeleteCollectionItem = ({ onClose, item, collectionUid }) => {
           })
         );
       }
+      // 删除后清空侧栏多选，避免残留过期 uid
+      dispatch(clearSidebarSelection());
     }).catch((error) => {
       console.error('Error deleting item', error);
       toast.error(error?.message || 'Error deleting item');
