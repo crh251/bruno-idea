@@ -18,8 +18,8 @@ import {
   IconChevronsUp
 } from '@tabler/icons';
 
-import { importCollection, importCollectionFromZip, newHttpRequest, expandAllInCollection, collapseAllInCollection } from 'providers/ReduxStore/slices/collections/actions';
-import { sortCollections } from 'providers/ReduxStore/slices/collections/index';
+import { importCollection, importCollectionFromZip, newHttpRequest } from 'providers/ReduxStore/slices/collections/actions';
+import { sortCollections, expandAllInCollection, collapseAllInCollection } from 'providers/ReduxStore/slices/collections/index';
 import { savePreferences, setIsCreatingCollection, setIsOpeningCollection, toggleSidebarSearch } from 'providers/ReduxStore/slices/app';
 import { normalizePath } from 'utils/common/path';
 import { isScratchCollection, flattenItems, isItemTransientRequest, findItemInCollection } from 'utils/collections';
