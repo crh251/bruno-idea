@@ -31,7 +31,7 @@ describe('transformUrl', () => {
     const result = transformUrl(url, params);
 
     expect(result).toEqual({
-      raw: 'https://example.com/api/resource?limit=10&offset=20',
+      raw: 'https://example.com/api/resource',
       protocol: 'https',
       host: ['example', 'com'],
       path: ['api', 'resource'],
@@ -41,6 +41,52 @@ describe('transformUrl', () => {
       ],
       variable: []
     });
+  });
+
+  it('should not duplicate query params when the URL already contains them', () => {
+    const url = 'https://example.com/api/resource?limit=10&offset=20';
+    const params = [
+      { name: 'limit', value: '10', type: 'query' },
+      { name: 'offset', value: '20', type: 'query' }
+    ];
+
+    const result = transformUrl(url, params);
+
+    // raw must not carry the query string, otherwise Postman appends the
+    // query array to it and every param gets duplicated (?a=b&a=b)
+    expect(result.raw).toBe('https://example.com/api/resource');
+    expect(result.raw.includes('?')).toBe(false);
+    expect(result.query).toEqual([
+      { key: 'limit', value: '10' },
+      { key: 'offset', value: '20' }
+    ]);
+  });
+
+  it('should merge URL query pairs missing from the params table', () => {
+    const url = 'https://example.com/api/resource?limit=10&extra=1';
+    const params = [
+      { name: 'limit', value: '10', type: 'query' }
+    ];
+
+    const result = transformUrl(url, params);
+
+    expect(result.raw).toBe('https://example.com/api/resource');
+    expect(result.query).toEqual([
+      { key: 'limit', value: '10' },
+      { key: 'extra', value: '1' }
+    ]);
+  });
+
+  it('should extract query params from the URL when the params table is empty', () => {
+    const url = 'https://example.com/api/resource?only=url';
+    const params = [];
+
+    const result = transformUrl(url, params);
+
+    expect(result.raw).toBe('https://example.com/api/resource');
+    expect(result.query).toEqual([
+      { key: 'only', value: 'url' }
+    ]);
   });
 
   it('should handle URL without protocol', () => {

@@ -122,6 +122,27 @@ export const transformUrl = (url, params) => {
     .filter((param) => param.type === 'path')
     .map(({ name, value, description }) => ({ key: name, value, description }));
 
+  // If the raw URL already carries a query string, make sure `raw` and
+  // `postmanUrl.query` don't disagree — otherwise Postman appends the query
+  // array to raw and every param gets duplicated (?a=b&a=b).
+  const [urlWithoutQuery, urlQuery = ''] = url.split('?');
+  if (urlQuery) {
+    const urlQueryPairs = urlQuery.split('&').map((pair) => {
+      const [key, value = ''] = pair.split('=');
+      return { key, value };
+    });
+    const queryKeys = new Set(postmanUrl.query.map((entry) => entry.key));
+    const missingFromParams = urlQueryPairs.filter((pair) => !queryKeys.has(pair.key));
+
+    if (missingFromParams.length > 0) {
+      postmanUrl.query = [
+        ...postmanUrl.query,
+        ...missingFromParams.map(({ key, value }) => ({ key, value }))
+      ];
+    }
+    postmanUrl.raw = urlWithoutQuery;
+  }
+
   return postmanUrl;
 };
 
